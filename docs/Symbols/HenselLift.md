@@ -67,7 +67,7 @@ Polynomials with higher-degree roots work the same way. The real cube root of 2 
 HenselLift[#^3 - 2 &, 3, 5, 5]
 ```
 
-<!-- => 1228 -->
+<!-- => 2178 -->
 
 ## Properties and Relations
 
@@ -102,4 +102,4 @@ With[{lifted = HenselLift[#^2 + 1 &, 2, 5, 10]},
     {lifted, Mod[lifted^2 + 1, 5^10]}]
 ```
 
-<!-- => {<a 10-digit residue>, 0} -->
+<!-- => {6139557, 0} -->

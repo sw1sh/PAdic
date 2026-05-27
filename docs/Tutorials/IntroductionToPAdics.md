@@ -20,13 +20,37 @@ Fix a prime $p$. The **p-adic valuation** $v_p \colon \mathbb{Q}^\times \to \mat
 
 $$ v_p(a/b) = v_p(a) - v_p(b), \qquad v_p(n) = \max\{e \ge 0 : p^e \mid n\} $$
 
-with $v_p(0) = +\infty$ by convention. Numerically:
+with $v_p(0) = +\infty$ by convention. Walking the three corner cases:
+
+The 7-adic valuation of an integer divisible by $7^2$:
 
 ```wl
-{PAdicValuation[98, 7], PAdicValuation[1/49, 7], PAdicValuation[0, 7]}
+PAdicValuation[98, 7]
 ```
 
-The 7-adic valuation of $98 = 2 \cdot 7^2$ is $2$; of $1/49 = 1/7^2$ is $-2$; of $0$ is $+\infty$. Multiplicativity $v_p(xy) = v_p(x) + v_p(y)$ is immediate from the definition.
+<!-- => 2 -->
+
+---
+
+The valuation of a reciprocal - negative, because $1/49 = 1/7^2$:
+
+```wl
+PAdicValuation[1/49, 7]
+```
+
+<!-- => -2 -->
+
+---
+
+And the conventional value at $0$, which makes the ultrametric inequality unconditional:
+
+```wl
+PAdicValuation[0, 7]
+```
+
+<!-- => Infinity -->
+
+Multiplicativity $v_p(xy) = v_p(x) + v_p(y)$ is immediate from the definition.
 
 ## The p-adic absolute value
 
@@ -75,18 +99,21 @@ Algebraically: $\sum_{i=0}^{\infty} (p - 1) p^i = (p - 1) \cdot \frac{1}{1 - p} 
 
 ## A geometric series that converges p-adically but not over $\mathbb{R}$
 
-In the real numbers, the series $\sum_{k \ge 0} 7^k = 1 + 7 + 49 + 343 + \ldots$ diverges. In $\mathbb{Q}_7$, the *general* term $7^k$ has p-adic norm $7^{-k} \to 0$, so the series *does* converge - to $1/(1 - 7) = -1/6$:
+In the real numbers, the series $\sum_{k \ge 0} 7^k = 1 + 7 + 49 + 343 + \ldots$ diverges. In $\mathbb{Q}_7$, the *general* term $7^k$ has p-adic norm $7^{-k} \to 0$, so the series *does* converge - to $1/(1 - 7) = -1/6$. The 7-adic distance between the partial sum and the closed-form limit drops by one factor of $7$ each step:
 
 ```wl
-Block[{p = 7, n = 20},
-    Mod[Sum[p^k, {k, 0, n}] - (-1/6 // PowerMod[6, -1, p^(n + 1)] * (-1) Mod # &), p^n]]
+Table[N @ PAdicNorm[Sum[7^k, {k, 0, n}] - (-1/6), 7], {n, 1, 8}]
 ```
 
-A simpler check: $1/(1 - 7) = -1/6$ as a p-adic integer is itself a periodic expansion:
+<!-- => {0.0204, 0.00292, 0.000416, 5.95e-5, 8.50e-6, 1.21e-6, 1.73e-7, 2.48e-8} (each ~ 1/7 of the previous) -->
+
+And the limit $-1/6$ itself sits in $\mathbb{Z}_7$ as a periodic expansion - every digit is $1$, because $-1/6 = 1 + 7 + 49 + \ldots$:
 
 ```wl
 PAdicDigits[-1/6, 7, 10]
 ```
+
+<!-- => {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, 0} -->
 
 ## Where this is going
 

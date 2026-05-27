@@ -18,7 +18,12 @@ PacletObject[<|
                 "Wolfram`PAdic`PAdicValuation",
                 "Wolfram`PAdic`PAdicNorm",
                 "Wolfram`PAdic`PAdicDigits",
-                "Wolfram`PAdic`HenselLift"
+                "Wolfram`PAdic`HenselLift",
+                "Wolfram`PAdic`PAdicNumber",
+                "Wolfram`PAdic`PAdicNumberQ",
+                "Wolfram`PAdic`PAdicDigitPlot",
+                "Wolfram`PAdic`PAdicTree",
+                "Wolfram`PAdic`PAdicValuationArray"
             }
         },
         {

@@ -69,15 +69,15 @@ PAdicDigits[1/3, 7, 6]
 
 ## Properties and Relations
 
-The reconstruction $\sum_i a_i p^{i+j}$ recovers $x$ when there are enough digits:
+The reconstruction $\sum_i a_i p^{i+j}$ recovers $x$ in the p-adic sense: the partial sum agrees with $x$ to at least $n$ digits of p-adic precision, so $v_p(\text{partial} - x) \ge n$:
 
 ```wl
 With[{x = 1/3, p = 7, n = 20},
     Block[{ds = PAdicDigits[x, p, n]},
-        Mod[Total[First[ds] p^Range[0, n - 1]] - x p^(-Last[ds]), p^(n - 1)]]]
+        PAdicValuation[Total[First[ds] p^(Range[0, n - 1] + Last[ds])] - x, p] >= n]]
 ```
 
-<!-- => 0 -->
+<!-- => True -->
 
 `PAdicDigits` is to $\mathbb{Q}_p$ what [RealDigits]() is to $\mathbb{R}$:
 

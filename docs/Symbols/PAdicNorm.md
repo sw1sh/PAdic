@@ -78,11 +78,11 @@ With[{x = 14, y = 21, p = 7},
 
 ## Neat Examples
 
-The geometric series for $|x|_p < 1$ converges in the p-adic topology to $1/(1-x)$. For $x = p = 7$:
+The geometric series $\sum_{k \ge 0} 7^k$ diverges in $\mathbb{R}$, but in $\mathbb{Q}_7$ the term $7^k$ has p-adic norm $7^{-k} \to 0$ and the series *does* converge to $1/(1 - 7) = -1/6$. Concretely, the p-adic norm of the difference between the $N$-term partial sum and $-1/6$ is $7^{-(N+1)}$:
 
 ```wl
-With[{x = 7, p = 7, n = 10},
-    {N @ PAdicNorm[Sum[x^k, {k, 0, n}] - 1/(1 - x), p], "should -> 0 as n increases"}]
+With[{p = 7, n = 10},
+    PAdicNorm[Sum[p^k, {k, 0, n}] - (-1/6), p]]
 ```
 
-<!-- => {1/2.8247524900000003*^8, "should -> 0 as n increases"} -->
+<!-- => 1/1977326743 (= 1/7^11) -->
