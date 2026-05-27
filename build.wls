@@ -14,6 +14,12 @@ Get[FileNameJoin[{pacletDir, "..", "..", "MarkdownToNotebook.wl"}]]
 PacletDirectoryLoad[pacletDir]
 Needs["Wolfram`PAdic`"]
 
+(* Opt into the WolframParser LaTeX-math path when available - MTN
+   detects this via Names[] and routes TeX through it instead of
+   ImportString. *)
+PacletDirectoryLoad[FileNameJoin[{pacletDir, "..", "WolframParser"}]]
+Quiet @ Check[Needs["Wolfram`Parser`LaTeX`"], Null]
+
 subdir["Symbol"] = {"Documentation", "English", "ReferencePages", "Symbols"}
 subdir["Guide"] = {"Documentation", "English", "Guides"}
 (* Overview shares the tutorial/ URI namespace with TechNotes
