@@ -28,12 +28,21 @@ The package provides [PAdicValuation](), [PAdicNorm](), [PAdicDigits](), and [He
 
 ## Basic Examples
 
-The 7-adic valuation and norm of $98 = 2 \cdot 7^2$:
+The 7-adic valuation of $98 = 2 \cdot 7^2$:
 
 ```wl
-{PAdicValuation[98, 7], PAdicNorm[98, 7]}
+PAdicValuation[98, 7]
 ```
-<!-- => {2, 1/49} -->
+<!-- => 2 -->
+
+---
+
+The 7-adic absolute value of the same integer:
+
+```wl
+PAdicNorm[98, 7]
+```
+<!-- => 1/49 -->
 
 ---
 
@@ -52,6 +61,16 @@ Lift the approximation $3$ to a square root of $2$ in $\mathbb{Z}_7$ at precisio
 HenselLift[#^2 - 2 &, 3, 7, 4]
 ```
 <!-- => 2166 -->
+
+## Author Notes
+
+This paclet was authored with substantial help from an AI assistant
+(Claude Opus 4.7, Anthropic). The implementation, documentation, and
+worked examples were drafted by the model and reviewed / edited by the
+human contributor. The math content (p-adic valuation, ultrametric
+inequality, Hensel's lemma, Newton iteration with quadratic precision
+doubling) follows Koblitz's *p-adic Numbers, p-adic Analysis, and
+Zeta-Functions* (2nd ed., Springer GTM 58, 1984).
 
 ## Hero Image
 
