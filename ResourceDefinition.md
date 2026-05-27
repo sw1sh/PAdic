@@ -10,7 +10,7 @@ Keywords: [p-adic, valuation, norm, ultrametric, Hensel lifting, number theory]
 MainGuide: Documentation/English/Guides/PAdic.nb
 License: MIT
 WolframVersion: 14.0+
-Categories: [Number Theory]
+Categories: [Higher Mathematical Computation]
 Sources: ["Neal Koblitz, *p-adic Numbers, p-adic Analysis, and Zeta-Functions*, Springer GTM 58, 2nd ed., 1984"]
 SourceControlURL: https://github.com/sw1sh/PAdic
 Links: ["[p-adic number (Wikipedia)](https://en.wikipedia.org/wiki/P-adic_number)", "[Hensel's lemma (Wikipedia)](https://en.wikipedia.org/wiki/Hensel%27s_lemma)"]
