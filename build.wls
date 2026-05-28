@@ -5,8 +5,6 @@
    persistence framework. Also builds the paclet-repository submission
    notebook (ResourceDefinition). *)
 
-print[args___] := WriteString["stdout", StringJoin[ToString /@ {args}], "\n"]
-
 pacletDir = DirectoryName[$InputFileName]
 Get[FileNameJoin[{pacletDir, "..", "..", "MarkdownToNotebook.wl"}]]
 
@@ -42,17 +40,17 @@ buildDoc[srcFile_String] := Block[{info, tmpl, baseName, dir, out},
     Quiet @ CreateDirectory[dir, CreateIntermediateDirectories -> True];
     out = FileNameJoin[{dir, baseName <> ".nb"}];
     MarkdownToNotebook[srcFile, out];
-    print["  ", FileNameTake[srcFile], " -> Documentation/English/", Last[subdir[tmpl]], "/", baseName, ".nb"]
+    Print["  ", FileNameTake[srcFile], " -> Documentation/English/", Last[subdir[tmpl]], "/", baseName, ".nb"]
 ]
 
-print["building PAdic documentation"]
+Print["building PAdic documentation"]
 Scan[buildDoc, Sort @ FileNames["*.md", FileNameJoin[{pacletDir, "docs"}], Infinity]]
 
 (* paclet-repository submission notebook at the paclet root *)
 rd = FileNameJoin[{pacletDir, "ResourceDefinition.md"}]
 If[ FileExistsQ[rd],
     MarkdownToNotebook[rd, FileNameJoin[{pacletDir, "ResourceDefinition.nb"}]];
-    print["  ResourceDefinition.md -> ResourceDefinition.nb"]
+    Print["  ResourceDefinition.md -> ResourceDefinition.nb"]
 ]
 
-print["done"]
+Print["done"]
