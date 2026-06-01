@@ -6,17 +6,35 @@
    notebook (ResourceDefinition). *)
 
 pacletDir = DirectoryName[$InputFileName]
+
+(* Register the in-repo WolframParser BEFORE loading MTN: MTN's own
+   Needs["Wolfram`Parser`"] then finds it locally instead of trying to download
+   it. Its LaTeXMathParse (context Wolfram`Parser`, not Wolfram`Parser`LaTeX`)
+   is what MTN routes TeX through; without this the build silently falls back to
+   ImportString and loses all the parser's \frac / \mathbb / big-operator work. *)
+PacletDirectoryLoad[FileNameJoin[{pacletDir, "..", "WolframParser"}]]
 Get[FileNameJoin[{pacletDir, "..", "..", "MarkdownToNotebook.wl"}]]
+Quiet @ Check[Needs["Wolfram`Parser`"], Null]
 
 (* load the paclet so example cells resolve its symbols during evaluation *)
 PacletDirectoryLoad[pacletDir]
 Needs["Wolfram`PAdic`"]
 
-(* Opt into the WolframParser LaTeX-math path when available - MTN
-   detects this via Names[] and routes TeX through it instead of
-   ImportString. *)
-PacletDirectoryLoad[FileNameJoin[{pacletDir, "..", "WolframParser"}]]
-Quiet @ Check[Needs["Wolfram`Parser`LaTeX`"], Null]
+(* Render LaTeX math in Computer Modern when an installed CM font allows it;
+   fall back to the front end's native math font otherwise so the build still
+   succeeds.  Prefer Latin Modern *Math* (its italics are the cmmi letterforms
+   LaTeX uses; MarkdownToNotebook's applyMathFont remaps to them and pulls
+   \mathbb into MSBM10), then Latin Modern Roman, then CMU Serif.  Passed via
+   the "MathFont" option. *)
+$fontDirs = {
+    FileNameJoin[{$HomeDirectory, "Library", "Fonts"}],
+    "/Library/Fonts", "/System/Library/Fonts"}
+$mathFont = Which[
+    FileNames["latinmodern-math*" | "lmmath*", $fontDirs] =!= {}, "Latin Modern Math",
+    FileNames["lmroman*" | "latinmodern*", $fontDirs] =!= {}, "Latin Modern Roman",
+    FileNames["cmun*", $fontDirs] =!= {}, "CMU Serif",
+    True, Automatic]
+Print["  math font: ", $mathFont]
 
 subdir["Symbol"] = {"Documentation", "English", "ReferencePages", "Symbols"}
 subdir["Guide"] = {"Documentation", "English", "Guides"}
@@ -33,13 +51,13 @@ subdir["Overview"] = {"Documentation", "English", "Tutorials"}
    frontmatter Name: is the rendered title ("PAdic"), while the URI tail
    and file basename are "Overview". *)
 buildDoc[srcFile_String] := Block[{info, tmpl, baseName, dir, out},
-    info = MarkdownToNotebook[srcFile, "Association"];
+    info = MarkdownToNotebook[srcFile, "Association", "MathFont" -> $mathFont];
     tmpl = info["Template"];
     baseName = FileBaseName[srcFile];
     dir = FileNameJoin[Prepend[subdir[tmpl], pacletDir]];
     Quiet @ CreateDirectory[dir, CreateIntermediateDirectories -> True];
     out = FileNameJoin[{dir, baseName <> ".nb"}];
-    MarkdownToNotebook[srcFile, out];
+    MarkdownToNotebook[srcFile, out, "MathFont" -> $mathFont];
     Print["  ", FileNameTake[srcFile], " -> Documentation/English/", Last[subdir[tmpl]], "/", baseName, ".nb"]
 ]
 
@@ -49,7 +67,7 @@ Scan[buildDoc, Sort @ FileNames["*.md", FileNameJoin[{pacletDir, "docs"}], Infin
 (* paclet-repository submission notebook at the paclet root *)
 rd = FileNameJoin[{pacletDir, "ResourceDefinition.md"}]
 If[ FileExistsQ[rd],
-    MarkdownToNotebook[rd, FileNameJoin[{pacletDir, "ResourceDefinition.nb"}]];
+    MarkdownToNotebook[rd, FileNameJoin[{pacletDir, "ResourceDefinition.nb"}], "MathFont" -> $mathFont];
     Print["  ResourceDefinition.md -> ResourceDefinition.nb"]
 ]
 

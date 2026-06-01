@@ -16,23 +16,23 @@ Keywords: [p-adic, valuation, norm, ultrametric, Hensel lifting, number theory]
 ## Symbols
 
 ### Valuation and norm
-- [PAdicValuation](paclet:Wolfram/PAdic/ref/PAdicValuation)
-- [PAdicNorm](paclet:Wolfram/PAdic/ref/PAdicNorm)
+- [PAdicValuation]()
+- [PAdicNorm]()
 
 ### Digit expansion
-- [PAdicDigits](paclet:Wolfram/PAdic/ref/PAdicDigits)
+- [PAdicDigits]()
 
 ### Hensel lifting
-- [HenselLift](paclet:Wolfram/PAdic/ref/HenselLift)
+- [HenselLift]()
 
 ### A computable p-adic integer
-- [PAdicNumber](paclet:Wolfram/PAdic/ref/PAdicNumber)
-- [PAdicNumberQ](paclet:Wolfram/PAdic/ref/PAdicNumberQ)
+- [PAdicNumber]()
+- [PAdicNumberQ]()
 
 ### Visualisations
-- [PAdicDigitPlot](paclet:Wolfram/PAdic/ref/PAdicDigitPlot)
-- [PAdicTree](paclet:Wolfram/PAdic/ref/PAdicTree)
-- [PAdicValuationArray](paclet:Wolfram/PAdic/ref/PAdicValuationArray)
+- [PAdicDigitPlot]()
+- [PAdicTree]()
+- [PAdicValuationArray]()
 
 ## Tutorials
 
