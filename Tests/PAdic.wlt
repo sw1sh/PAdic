@@ -344,6 +344,91 @@ VerificationTest[
 ]
 
 
+(* === PAdicNumber: lazy (generator-valued) Z_p elements ===
+   The two nontrivial idempotents of Z_10 are genuinely irrational p-adics
+   (no closed form), so they are encoded as coherent generators
+   k :-> residue mod 10^k. P ends in 5, Q ends in 6, P + Q = 1, P Q = 0. *)
+
+VerificationTest[
+    PAdicNumberQ[PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]]],
+    True,
+    TestID -> "PAdicNumber lazy: PAdicNumberQ recognises a generator"
+]
+
+VerificationTest[
+    With[{P = PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]]},
+        P^2 == P],
+    True,
+    TestID -> "PAdicNumber lazy: idempotent P^2 == P"
+]
+
+VerificationTest[
+    With[{Q = PAdicNumber[10, Function[k, ChineseRemainder[{0, 1}, {2^k, 5^k}]]]},
+        Q^2 == Q],
+    True,
+    TestID -> "PAdicNumber lazy: idempotent Q^2 == Q"
+]
+
+VerificationTest[
+    With[
+        {
+            P = PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]],
+            Q = PAdicNumber[10, Function[k, ChineseRemainder[{0, 1}, {2^k, 5^k}]]]
+        },
+        {P + Q == 1, P*Q == 0}],
+    {True, True},
+    TestID -> "PAdicNumber lazy: complementary orthogonal idempotents"
+]
+
+VerificationTest[
+    With[{P = PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]]},
+        Mod[P, 10^12]],
+    918212890625,
+    TestID -> "PAdicNumber lazy: Mod forces the generator (P mod 10^12)"
+]
+
+VerificationTest[
+    With[{P = PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]]},
+        First @ PAdicDigits[P, 10, 6]],
+    {5, 2, 6, 0, 9, 8},
+    TestID -> "PAdicNumber lazy: PAdicDigits forces little-endian digits"
+]
+
+VerificationTest[
+    With[{P = PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]]},
+        PAdicNumber[10, P, 6]],
+    PAdicNumber[10, 890625, 6],
+    TestID -> "PAdicNumber lazy: truncation to finite precision evaluates"
+]
+
+VerificationTest[
+    With[
+        {
+            P = PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]],
+            Q = PAdicNumber[10, Function[k, ChineseRemainder[{0, 1}, {2^k, 5^k}]]]
+        },
+        P == Q],
+    False,
+    TestID -> "PAdicNumber lazy: distinct idempotents compare unequal"
+]
+
+VerificationTest[
+    With[{P = PAdicNumber[10, Function[k, ChineseRemainder[{1, 0}, {2^k, 5^k}]]]},
+        Abs[P]],
+    1,
+    TestID -> "PAdicNumber lazy: Abs of a unit idempotent is 1"
+]
+
+(* A lazy element can also wrap a Hensel lift: the precision-on-demand
+   square root of 2 in Z_7. *)
+VerificationTest[
+    With[{s = PAdicNumber[7, Function[k, HenselLift[#^2 - 2 &, 3, 7, k]]]},
+        s^2 == 2],
+    True,
+    TestID -> "PAdicNumber lazy: Hensel-lift generator is a square root of 2"
+]
+
+
 (* === Visualisations (smoke - check head only) === *)
 
 VerificationTest[

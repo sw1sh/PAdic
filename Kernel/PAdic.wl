@@ -26,7 +26,7 @@ PAdicDigits::usage = "PAdicDigits[x, p] gives {{a_0, a_1, ..., a_{k-1}}, j} for 
 
 HenselLift::usage = "HenselLift[f, a, p, n] returns the unique a' in Z/p^n with f(a') = 0 mod p^n and a' = a mod p, computed by the p-adic Newton iteration a := a - f(a) / f'(a) (mod p^k) doubling the precision each step. Requires f(a) = 0 mod p and f'(a) != 0 mod p (Hensel's hypothesis); returns $Failed when the derivative vanishes mod p."
 
-PAdicNumber::usage = "PAdicNumber[p, x, n] represents the p-adic integer x mod p^n - an element of Z/p^n Z viewed as an approximation to a p-adic integer with precision n. PAdicNumber[p, x] uses a default precision of 20. The object carries UpValues for Plus, Times, Subtract, Power, Equal, Mod, Abs, and Norm, so Z_p arithmetic compose naturally: PAdicNumber[7, 3, 4] + PAdicNumber[7, 5, 4] -> PAdicNumber[7, 8, 4]. Mixed-arity Integer or Rational operands are auto-coerced. Negative input is reduced to a positive residue via x mod p^n (so PAdicNumber[7, -1, 4] is the canonical 7^4 - 1)."
+PAdicNumber::usage = "PAdicNumber[p, x, n] represents the p-adic integer x mod p^n - an element of Z/p^n Z viewed as an approximation to a p-adic integer with precision n. PAdicNumber[p, x] uses the default precision Infinity, storing an Integer or Rational value exactly. PAdicNumber[p, f] with f a pure function k :-> (residue mod p^k) represents a *lazy* element of Z_p - a coherent residue sequence - for genuinely irrational p-adics (e.g. the 10-adic idempotents) that have no closed form; arithmetic composes generators and precision is pulled by Mod / PAdicDigits / truncation. The object carries UpValues for Plus, Times, Subtract, Power, Equal, Mod, Abs, and Norm, so Z_p arithmetic compose naturally: PAdicNumber[7, 3, 4] + PAdicNumber[7, 5, 4] -> PAdicNumber[7, 8, 4]. Mixed-arity Integer or Rational operands are auto-coerced. Negative input is reduced to a positive residue via x mod p^n (so PAdicNumber[7, -1, 4] is the canonical 7^4 - 1)."
 
 PAdicNumberQ::usage = "PAdicNumberQ[x] tests whether x is a normalised PAdicNumber expression."
 
@@ -52,7 +52,13 @@ PAdicValuation[x_Rational, p_Integer ? Positive] /; p >= 2 :=
 (* PAdicNumber objects answer the valuation question against their precision -
    the valuation is at most n - 1 (the residue is in [0, p^n) so the most
    factors of p it can carry is the residue itself). *)
-PAdicValuation[PAdicNumber[p_, x_, _], p_] := If[x === 0, Infinity, IntegerExponent[x, p]]
+PAdicValuation[PAdicNumber[p_, x_, _], p_] /; numQ[x] := If[x === 0, Infinity, IntegerExponent[x, p]]
+(* lazy: read the valuation off enough forced digits (the count of leading
+   zero digits); all-zero to that depth reports Infinity. *)
+PAdicValuation[PAdicNumber[p_, f_Function, _], p_] :=
+    With[{r = Mod[f[$lazyEqualDigits], p^$lazyEqualDigits]},
+        If[r === 0, Infinity, IntegerExponent[r, p]]
+    ]
 
 
 (* === norm === *)
@@ -106,8 +112,15 @@ PAdicDigits[x_Rational, p_Integer ? Positive, n_Integer ? Positive] /; p >= 2 :=
 PAdicDigits[x_ ? NumericQ, p_Integer ? Positive] :=
     PAdicDigits[x, p, $defaultDigits]
 
-PAdicDigits[PAdicNumber[p_, x_, n_]] := {intDigitsLittleEndian[Mod[x, p^n], p, n], 0}
-PAdicDigits[PAdicNumber[p_, x_, n_], p_] := {intDigitsLittleEndian[Mod[x, p^n], p, n], 0}
+(* Digits of a PAdicNumber go through residueAt, so the same code serves a
+   finite residue, an exact rational, and a lazy generator. With an explicit
+   count k the value is forced to k digits; without one a finite-precision
+   object uses its precision and an exact / lazy one uses $defaultDigits. *)
+PAdicDigits[PAdicNumber[p_, v_, _], q_Integer, k_Integer ? Positive] :=
+    {intDigitsLittleEndian[residueAt[v, p, k], p, k], 0}
+PAdicDigits[pn : PAdicNumber[p_, _, prec_]] :=
+    PAdicDigits[pn, p, If[IntegerQ[prec], prec, $defaultDigits]]
+PAdicDigits[pn : PAdicNumber[p_, _, _], p_] := PAdicDigits[pn]
 
 
 (* === Hensel lifting === *)
@@ -164,6 +177,9 @@ HenselLift[f_, a_Integer, p_Integer ? Positive, n_Integer ? Positive] /; p >= 2 
 $defaultPrecision = Infinity
 
 PAdicNumberQ[PAdicNumber[_Integer, _Integer | _Rational, _Integer | Infinity]] := True
+(* A lazy element carries a coherent generator (a Function) in the value
+   slot and is always at Infinity precision - see the lazy section below. *)
+PAdicNumberQ[PAdicNumber[_Integer, _Function, Infinity]] := True
 PAdicNumberQ[_] := False
 
 (* Infinity-precision constructor: the canonical form for an exact Z_p value
@@ -199,6 +215,59 @@ PAdicNumber[p_Integer ? Positive, x_Rational, n_Integer ? Positive] /; p >= 2 :=
 PAdicNumber[p_Integer ? Positive, x_ ? NumericQ] /; p >= 2 :=
     PAdicNumber[p, x, $defaultPrecision]
 
+(* === lazy (generator-valued) Z_p elements ===
+
+   A genuinely irrational p-adic integer - the 10-adic idempotents, a
+   Teichmuller representative, any non-eventually-periodic digit stream -
+   has no closed-form value to store. We encode it the way Z_p is *defined*,
+   as the inverse limit lim Z/p^n: a coherent generator, a pure function
+   gen: k |-> (residue mod p^k) with gen[k + 1] = gen[k] (mod p^k). Such a
+   Function may sit in the value slot of an Infinity-precision PAdicNumber.
+   Arithmetic composes generators lazily and precision is *pulled* - by
+   truncation, Mod, or PAdicDigits - never pushed; nothing is forced until
+   a concrete digit count is asked for.
+
+   PAdicNumber[p, f] with f a Function is the canonical lazy element; giving
+   it a finite precision forces f to that many digits. *)
+PAdicNumber[p_Integer ? Positive, f_Function] /; p >= 2 := PAdicNumber[p, f, Infinity]
+PAdicNumber[p_Integer ? Positive, f_Function, n_Integer ? Positive] /; p >= 2 :=
+    PAdicNumber[p, Mod[f[n], p^n], n]
+
+(* Tests for the two value shapes a PAdicNumber can carry. *)
+numQ[x_] := MatchQ[x, _Integer | _Rational]
+genQ[x_] := MatchQ[x, _Function]
+
+(* residueAt is the single primitive every lazy operation forces through:
+   the residue of a stored value at precision k. The k_Integer constraint is
+   load-bearing - it keeps residueAt *inert* on a symbolic / Slot argument,
+   so composing generators below never applies anything until a real digit
+   count arrives. *)
+residueAt[x_Integer, p_, k_Integer] := Mod[x, p^k]
+residueAt[x_Rational, p_, k_Integer] := Mod[Numerator[x] PowerMod[Denominator[x], -1, p^k], p^k]
+residueAt[f_Function, p_, k_Integer] := Mod[f[k], p^k]
+
+(* Compose stored values into a new generator. Slot form is safe because
+   residueAt stays unevaluated until the result is applied to an Integer, and
+   any operand that is itself a Function shields its own slots. *)
+lazyBinary[op_, p_, a_, b_] := Function[Mod[op[residueAt[a, p, #], residueAt[b, p, #]], p^#]]
+lazyPower[p_, a_, k_Integer ? Positive] := Function[Mod[residueAt[a, p, #]^k, p^#]]
+lazyPower[p_, a_, k_Integer ? Negative] := Function[PowerMod[residueAt[a, p, #], k, p^#]]
+
+(* Equality involving a lazy value cannot be decided exactly (no finite
+   number of digits proves two coherent sequences equal); we check the first
+   $lazyEqualDigits digits and document the limitation. *)
+$lazyEqualDigits = 64
+
+(* Mod[lazy, m]: a p-adic integer maps to Z/mZ only when m divides some p^k;
+   force to the least such k. (For m built from other primes the value is
+   not determined - we force a generous default rather than loop.) *)
+lazyModPrec[_, 1] := 1
+lazyModPrec[p_, m_Integer] :=
+    If[ SubsetQ[FactorInteger[p][[All, 1]], FactorInteger[m][[All, 1]]],
+        Max[Ceiling[#[[2]] / IntegerExponent[p, #[[1]]]] & /@ FactorInteger[m]],
+        $lazyEqualDigits
+    ]
+
 PAdicNumber::nzp = "The rational `1` has the prime `2` in its denominator and so is not in Z_p; PAdicNumber currently models only Z_p elements."
 
 (* Coerce a non-PAdic numeric operand into a PAdicNumber sharing the
@@ -211,17 +280,33 @@ reduceMod[x_, _, DirectedInfinity[1]] := x
 reduceMod[x_, p_, n_Integer] := Mod[x, p^n]
 
 (* Plus / Subtract: add residues, take Min of precisions. *)
-PAdicNumber /: Plus[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] :=
+PAdicNumber /: Plus[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] /; numQ[a] && numQ[b] :=
     PAdicNumber[p, a + b, Min[n, m]]
+(* lazy companion: if either side is a generator, compose lazily when both
+   are exact (Min precision Infinity), else force both to the finite Min. *)
+PAdicNumber /: Plus[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] /; genQ[a] || genQ[b] :=
+    With[{k = Min[n, m]},
+        If[ k === Infinity,
+            PAdicNumber[p, lazyBinary[Plus, p, a, b], Infinity],
+            PAdicNumber[p, Mod[residueAt[a, p, k] + residueAt[b, p, k], p^k], k]
+        ]
+    ]
 PAdicNumber /: Plus[pa : PAdicNumber[p_, _, n_], k : (_Integer | _Rational)] :=
     pa + coerceTo[k, p, n]
 
 (* Times: same. *)
-PAdicNumber /: Times[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] :=
+PAdicNumber /: Times[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] /; numQ[a] && numQ[b] :=
     PAdicNumber[p, a * b, Min[n, m]]
+PAdicNumber /: Times[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] /; genQ[a] || genQ[b] :=
+    With[{k = Min[n, m]},
+        If[ k === Infinity,
+            PAdicNumber[p, lazyBinary[Times, p, a, b], Infinity],
+            PAdicNumber[p, Mod[residueAt[a, p, k] * residueAt[b, p, k], p^k], k]
+        ]
+    ]
 PAdicNumber /: Times[pa : PAdicNumber[p_, _, n_], k : (_Integer | _Rational)] :=
     pa * coerceTo[k, p, n]
-PAdicNumber /: Times[-1, PAdicNumber[p_, a_, n_]] := PAdicNumber[p, -a, n]
+PAdicNumber /: Times[-1, PAdicNumber[p_, a_, n_]] /; numQ[a] := PAdicNumber[p, -a, n]
 
 (* Power: integer exponent. Finite precision uses PowerMod for speed; infinite
    precision falls back to ordinary Power (the result is an exact Rational /
@@ -229,8 +314,11 @@ PAdicNumber /: Times[-1, PAdicNumber[p_, a_, n_]] := PAdicNumber[p, -a, n]
    otherwise - which is correct because exact arithmetic in Z_p is just
    ordinary Rational arithmetic when no factor of p is in any denominator).
    Negative exponent requires the residue to be a p-adic unit. *)
-PAdicNumber /: Power[PAdicNumber[p_, a_, DirectedInfinity[1]], k_Integer] :=
+PAdicNumber /: Power[PAdicNumber[p_, a_, DirectedInfinity[1]], k_Integer] /; numQ[a] :=
     PAdicNumber[p, a^k, Infinity]
+(* lazy companion: a generator raised to an integer power is a generator. *)
+PAdicNumber /: Power[PAdicNumber[p_, f_, DirectedInfinity[1]], k_Integer] /; genQ[f] && k != 0 :=
+    PAdicNumber[p, lazyPower[p, f, k], Infinity]
 PAdicNumber /: Power[PAdicNumber[p_, a_, n_Integer], k_Integer] /; k > 0 :=
     PAdicNumber[p, PowerMod[a, k, p^n], n]
 PAdicNumber /: Power[PAdicNumber[p_, a_, n_Integer], -1] /; CoprimeQ[a, p] :=
@@ -239,16 +327,23 @@ PAdicNumber /: Power[PAdicNumber[p_, a_, n_Integer], k_Integer] /; k < 0 && Copr
     PAdicNumber[p, PowerMod[a, k, p^n], n]
 
 (* Equality: same prime, same residue at the lower precision. *)
-PAdicNumber /: Equal[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] :=
+PAdicNumber /: Equal[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] /; numQ[a] && numQ[b] :=
     With[{prec = Min[n, m]},
         If[ prec === Infinity, a === b, Mod[a - b, p^prec] === 0 ]
+    ]
+(* lazy companion: with a generator on either side, exact equality is not
+   decidable - compare the first $lazyEqualDigits digits (or the finite Min
+   precision, if one side is a truncation). *)
+PAdicNumber /: Equal[PAdicNumber[p_, a_, n_], PAdicNumber[p_, b_, m_]] /; genQ[a] || genQ[b] :=
+    With[{prec = Min[n, m] /. Infinity -> $lazyEqualDigits},
+        Mod[residueAt[a, p, prec] - residueAt[b, p, prec], p^prec] === 0
     ]
 PAdicNumber /: Equal[pa : PAdicNumber[p_, _, n_], k : (_Integer | _Rational)] :=
     pa == coerceTo[k, p, n]
 
 (* Abs / Norm route through PAdicNorm so the same |.|_p convention is used
    everywhere. *)
-PAdicNumber /: Abs[PAdicNumber[p_, a_, _]] := PAdicNorm[a, p]
+PAdicNumber /: Abs[pa : PAdicNumber[p_, _, _]] := PAdicNorm[pa, p]
 PAdicNumber /: Norm[pa_PAdicNumber] := Abs[pa]
 
 (* Mod[PAdicNumber, m] returns the residue as an Integer - the "lift back
@@ -259,6 +354,9 @@ PAdicNumber /: Mod[PAdicNumber[p_, a_Rational, _], m_Integer ? Positive] :=
     Block[{num = Numerator[a], den = Denominator[a]},
         Mod[num * PowerMod[den, -1, m], m]
     ]
+(* lazy: force the generator just deep enough that m divides p^k. *)
+PAdicNumber /: Mod[PAdicNumber[p_, f_Function, _], m_Integer ? Positive] :=
+    Mod[f[lazyModPrec[p, m]], m]
 
 (* Format: a SummaryBox following the FiniteFieldElement convention, with
    Prime / Precision in the always-visible row and an expanded view showing
@@ -286,7 +384,7 @@ padicResidueLabel[p_, a_, n_] := With[
     ]
 ]
 
-PAdicNumber /: MakeBoxes[pa : PAdicNumber[p_Integer, a_, n_], form : (StandardForm | TraditionalForm)] :=
+PAdicNumber /: MakeBoxes[pa : PAdicNumber[p_Integer, a_, n_], form : (StandardForm | TraditionalForm)] /; numQ[a] :=
     BoxForm`ArrangeSummaryBox[
         PAdicNumber,
         pa,
@@ -302,6 +400,28 @@ PAdicNumber /: MakeBoxes[pa : PAdicNumber[p_Integer, a_, n_], form : (StandardFo
             }]
         },
         form
+    ]
+
+(* A lazy element shows its first forced digits and flags the precision as
+   infinite-on-demand rather than a stored residue. *)
+(* MakeBoxes is HoldAllComplete, so match the evaluated DirectedInfinity[1]
+   rather than the held symbol Infinity (which would never match). *)
+PAdicNumber /: MakeBoxes[pa : PAdicNumber[p_Integer, f_Function, DirectedInfinity[1]], form : (StandardForm | TraditionalForm)] :=
+    With[{digits = Reverse @ First @ PAdicDigits[pa, p, 8]},
+        BoxForm`ArrangeSummaryBox[
+            PAdicNumber,
+            pa,
+            padicIcon[p],
+            {
+                BoxForm`SummaryItem[{"Prime: ", p}],
+                BoxForm`SummaryItem[{"Precision: ", Row[{"\[Infinity]", " (lazy)"}]}]
+            },
+            {
+                BoxForm`SummaryItem[{"Digits: ", Row[{"\[Ellipsis]\:2009", Row[Riffle[digits, "\:2009"]], " (base ", p, ")"}]}],
+                BoxForm`SummaryItem[{"Form: ", "coherent residue sequence"}]
+            },
+            form
+        ]
     ]
 
 
