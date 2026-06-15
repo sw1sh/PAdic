@@ -38,4 +38,5 @@ Keywords: [p-adic, valuation, norm, ultrametric, Hensel lifting, number theory]
 
 - [An Introduction to p-adic Numbers](paclet:Wolfram/PAdic/tutorial/IntroductionToPAdics)
 - [Hensel's Lemma and the p-adic Newton Iteration](paclet:Wolfram/PAdic/tutorial/HenselsLemma)
+- [Automorphic Numbers and the Idempotents of the 10-adics](paclet:Wolfram/PAdic/tutorial/AutomorphicNumbers)
 - [How Wolfram/PAdic Compares to Other p-adic Implementations](paclet:Wolfram/PAdic/tutorial/ComparisonOfPAdicImplementations)
