@@ -13,7 +13,7 @@ pacletDir = DirectoryName[$InputFileName]
    is what MTN routes TeX through; without this the build silently falls back to
    ImportString and loses all the parser's \frac / \mathbb / big-operator work. *)
 PacletDirectoryLoad[FileNameJoin[{pacletDir, "..", "WolframParser"}]]
-Get[FileNameJoin[{pacletDir, "..", "..", "MarkdownToNotebook.wl"}]]
+Get[FileNameJoin[{pacletDir, "..", "..", "..", "MarkdownToNotebook.wl"}]]
 Quiet @ Check[Needs["Wolfram`Parser`"], Null]
 
 (* load the paclet so example cells resolve its symbols during evaluation *)
