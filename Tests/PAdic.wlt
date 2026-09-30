@@ -429,6 +429,115 @@ VerificationTest[
 ]
 
 
+(* === TeichmullerRepresentative === *)
+
+VerificationTest[
+    With[{w = TeichmullerRepresentative[3, 7, 4]}, {Mod[w^6, 7^4], Mod[w - 3, 7]}],
+    {1, 0},
+    TestID -> "TeichmullerRepresentative: a 6th root of unity congruent to 3 mod 7"
+]
+
+VerificationTest[
+    TeichmullerRepresentative[7, 7, 4],
+    0,
+    TestID -> "TeichmullerRepresentative: the 0 class maps to 0"
+]
+
+VerificationTest[
+    Sort @ Table[Mod[TeichmullerRepresentative[a, 5, 3]^4, 5^3], {a, 1, 4}],
+    {1, 1, 1, 1},
+    TestID -> "TeichmullerRepresentative: every unit lifts to a 4th root of unity in Z_5"
+]
+
+
+(* === PAdicSquareQ === *)
+
+VerificationTest[
+    {PAdicSquareQ[2, 7], PAdicSquareQ[3, 7]},
+    {True, False},
+    TestID -> "PAdicSquareQ: 2 is a square in Q_7, 3 is not"
+]
+
+VerificationTest[
+    PAdicSquareQ[7, 7],
+    False,
+    TestID -> "PAdicSquareQ: odd valuation is never a square"
+]
+
+VerificationTest[
+    {PAdicSquareQ[17, 2], PAdicSquareQ[-1, 2]},
+    {True, False},
+    TestID -> "PAdicSquareQ: a 2-adic unit is a square iff it is 1 mod 8"
+]
+
+VerificationTest[
+    {PAdicSquareQ[4, Infinity], PAdicSquareQ[-4, Infinity]},
+    {True, False},
+    TestID -> "PAdicSquareQ: the real place is positivity"
+]
+
+
+(* === PAdicSqrt === *)
+
+VerificationTest[
+    With[{r = PAdicSqrt[2, 7, 5]}, Mod[r^2 - 2, 7^5]],
+    0,
+    TestID -> "PAdicSqrt: a square root of 2 in Z_7"
+]
+
+VerificationTest[
+    PAdicSqrt[3, 7, 5],
+    $Failed,
+    TestID -> "PAdicSqrt: a non-residue has no root"
+]
+
+VerificationTest[
+    With[{r = PAdicSqrt[17, 2, 8]}, Mod[r^2 - 17, 2^8]],
+    0,
+    TestID -> "PAdicSqrt: a 2-adic square root via the explicit lift"
+]
+
+VerificationTest[
+    PAdicSqrt[5, 2, 6],
+    $Failed,
+    TestID -> "PAdicSqrt: 5 is not a square in Q_2 (5 is not 1 mod 8)"
+]
+
+VerificationTest[
+    With[{r = PAdicSqrt[1/9, 7, 4]}, Mod[9 r^2 - 1, 7^4]],
+    0,
+    TestID -> "PAdicSqrt: a rational unit (1/9) - r^2 = 1/9 holds p-adically"
+]
+
+
+(* === HilbertSymbol === *)
+
+VerificationTest[
+    {HilbertSymbol[-1, -1, Infinity], HilbertSymbol[-1, -1, 2], HilbertSymbol[-1, -1, 3]},
+    {-1, -1, 1},
+    TestID -> "HilbertSymbol: textbook values of (-1, -1)_v"
+]
+
+VerificationTest[
+    {HilbertSymbol[2, 7, 7], HilbertSymbol[5, 7, 7]},
+    {1, -1},
+    TestID -> "HilbertSymbol: (u, p)_p is the Legendre symbol of the unit"
+]
+
+VerificationTest[
+    With[{a = 6, b = 35}, HilbertSymbol[a, b, 7] == HilbertSymbol[b, a, 7]],
+    True,
+    TestID -> "HilbertSymbol: symmetric"
+]
+
+VerificationTest[
+    With[{places = Append[Select[Union @ Flatten[First /@ FactorInteger[Abs[-15*21]*2]], PrimeQ], Infinity]},
+        Times @@ (HilbertSymbol[-15, 21, #] & /@ places)],
+    1,
+    TestID -> "HilbertSymbol: Hilbert reciprocity (product over all places is 1)"
+]
+
+
 (* === Visualisations (smoke - check head only) === *)
 
 VerificationTest[
@@ -463,4 +572,34 @@ VerificationTest[
     ],
     True,
     TestID -> "PAdicValuationArray: symmetric (Binomial[i+j, j] = Binomial[i+j, i])"
+]
+
+VerificationTest[
+    Head @ PAdicDiskPlot3D[3, 3],
+    Graphics3D,
+    TestID -> "PAdicDiskPlot3D: returns Graphics3D"
+]
+
+VerificationTest[
+    Count[PAdicDiskPlot3D[3, 3], _Cylinder, Infinity],
+    27,
+    TestID -> "PAdicDiskPlot3D: one coin per leaf residue (3^3)"
+]
+
+VerificationTest[
+    Count[PAdicDiskPlot3D[2], _Cylinder, Infinity],
+    8,
+    TestID -> "PAdicDiskPlot3D: default depth is 3 (2^3 coins)"
+]
+
+VerificationTest[
+    Count[PAdicDiskPlot3D[7, 0], _Cylinder, Infinity],
+    1,
+    TestID -> "PAdicDiskPlot3D: depth 0 is a single coin"
+]
+
+VerificationTest[
+    Head @ PAdicDiskPlot3D[1, 3],
+    PAdicDiskPlot3D,
+    TestID -> "PAdicDiskPlot3D: unevaluated for p < 2"
 ]

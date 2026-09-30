@@ -24,6 +24,12 @@ Keywords: [p-adic, valuation, norm, ultrametric, Hensel lifting, number theory]
 
 ### Hensel lifting
 - [HenselLift]()
+- [TeichmullerRepresentative]()
+- [PAdicSqrt]()
+
+### Squares and the local-global principle
+- [PAdicSquareQ]()
+- [HilbertSymbol]()
 
 ### A computable p-adic integer
 - [PAdicNumber]()
@@ -33,6 +39,7 @@ Keywords: [p-adic, valuation, norm, ultrametric, Hensel lifting, number theory]
 - [PAdicDigitPlot]()
 - [PAdicTree]()
 - [PAdicValuationArray]()
+- [PAdicDiskPlot3D]()
 
 ## Tutorials
 

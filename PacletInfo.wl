@@ -19,11 +19,16 @@ PacletObject[<|
                 "Wolfram`PAdic`PAdicNorm",
                 "Wolfram`PAdic`PAdicDigits",
                 "Wolfram`PAdic`HenselLift",
+                "Wolfram`PAdic`TeichmullerRepresentative",
+                "Wolfram`PAdic`PAdicSqrt",
+                "Wolfram`PAdic`PAdicSquareQ",
+                "Wolfram`PAdic`HilbertSymbol",
                 "Wolfram`PAdic`PAdicNumber",
                 "Wolfram`PAdic`PAdicNumberQ",
                 "Wolfram`PAdic`PAdicDigitPlot",
                 "Wolfram`PAdic`PAdicTree",
-                "Wolfram`PAdic`PAdicValuationArray"
+                "Wolfram`PAdic`PAdicValuationArray",
+                "Wolfram`PAdic`PAdicDiskPlot3D"
             }
         },
         {

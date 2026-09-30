@@ -26,6 +26,14 @@ PAdicDigits::usage = "PAdicDigits[x, p] gives {{a_0, a_1, ..., a_{k-1}}, j} for 
 
 HenselLift::usage = "HenselLift[f, a, p, n] returns the unique a' in Z/p^n with f(a') = 0 mod p^n and a' = a mod p, computed by the p-adic Newton iteration a := a - f(a) / f'(a) (mod p^k) doubling the precision each step. Requires f(a) = 0 mod p and f'(a) != 0 mod p (Hensel's hypothesis); returns $Failed when the derivative vanishes mod p."
 
+TeichmullerRepresentative::usage = "TeichmullerRepresentative[a, p, n] gives the residue mod p^n of the Teichmuller representative of a: the unique (p-1)-th root of unity in Z_p congruent to a mod p (and 0 when a = 0 mod p), got by Hensel-lifting x^(p-1) - 1 from the seed a."
+
+PAdicSqrt::usage = "PAdicSqrt[x, p, n] gives a residue r mod p^n with r^2 = x mod p^n - a square root of the p-adic integer x in Z_p to precision n - or $Failed if x is not a square in Z_p. Uses the Hensel/Newton iteration for odd p and an explicit lift for p = 2 (where the derivative 2x vanishes mod 2)."
+
+PAdicSquareQ::usage = "PAdicSquareQ[x, p] gives True if the rational x is a square in Q_p. For odd p this means v_p(x) is even and the unit part is a quadratic residue mod p; for p = 2, that the unit part is 1 mod 8; for p = Infinity, that x > 0."
+
+HilbertSymbol::usage = "HilbertSymbol[a, b, p] gives the Hilbert symbol (a, b)_p in {1, -1}: +1 when z^2 = a x^2 + b y^2 has a non-trivial solution in Q_p, and -1 otherwise. p is a prime or Infinity (the real place). The symbol is symmetric and bimultiplicative and obeys Hilbert reciprocity - the product over all places is 1."
+
 PAdicNumber::usage = "PAdicNumber[p, x, n] represents the p-adic integer x mod p^n - an element of Z/p^n Z viewed as an approximation to a p-adic integer with precision n. PAdicNumber[p, x] uses the default precision Infinity, storing an Integer or Rational value exactly. PAdicNumber[p, f] with f a pure function k :-> (residue mod p^k) represents a *lazy* element of Z_p - a coherent residue sequence - for genuinely irrational p-adics (e.g. the 10-adic idempotents) that have no closed form; arithmetic composes generators and precision is pulled by Mod / PAdicDigits / truncation. The object carries UpValues for Plus, Times, Subtract, Power, Equal, Mod, Abs, and Norm, so Z_p arithmetic compose naturally: PAdicNumber[7, 3, 4] + PAdicNumber[7, 5, 4] -> PAdicNumber[7, 8, 4]. Mixed-arity Integer or Rational operands are auto-coerced. Negative input is reduced to a positive residue via x mod p^n (so PAdicNumber[7, -1, 4] is the canonical 7^4 - 1)."
 
 PAdicNumberQ::usage = "PAdicNumberQ[x] tests whether x is a normalised PAdicNumber expression."
@@ -35,6 +43,8 @@ PAdicDigitPlot::usage = "PAdicDigitPlot[x, p, n] renders the first n base-p digi
 PAdicTree::usage = "PAdicTree[p, depth] returns the tree whose leaves are the residues mod p^depth, with each internal node at level k representing the disk of p-adic integers congruent mod p^k. The graph layout makes the ultrametric structure visible: the closer two leaves are in the tree, the closer they are p-adically."
 
 PAdicValuationArray::usage = "PAdicValuationArray[p, n] returns the n x n ArrayPlot whose (i, j) cell is colored by the p-adic valuation v_p(binomial(i+j, j)). By Kummer's theorem this is the number of carries when adding j to i in base p, and the picture is the Sierpinski-style fractal that is the canonical visualisation of p-adic structure inside the integers."
+
+PAdicDiskPlot3D::usage = "PAdicDiskPlot3D[p, depth] renders the p-adic integers to the given depth as a self-similar stack of 3D coins: p coins (labelled 0..p-1) sit at the vertices of a regular p-gon to form a cluster, p clusters sit at the vertices of a larger p-gon, and so on. Two residues land in the same sub-cluster exactly when they agree to that many base-p digits - the geometric 'circles within circles' picture of Z_p, the coin-stack companion to PAdicTree. PAdicDiskPlot3D[p] uses depth 3."
 
 Begin["`Private`"]
 
@@ -152,6 +162,77 @@ HenselLift[f_, a_Integer, p_Integer ? Positive, n_Integer ? Positive] /; p >= 2 
                 Last[#] < target &
             ];
             If[ MatchQ[First[lifted], $Failed], $Failed, First[lifted] ]
+        ]
+    ]
+
+
+(* === Teichmuller representatives === *)
+
+(* The unique (p-1)-th root of unity congruent to a mod p - a Hensel lift of
+   x^(p-1) - 1 from the residue a (and 0 for the class a = 0). *)
+TeichmullerRepresentative[a_Integer, p_Integer ? Positive, n_Integer ? Positive] /; p >= 2 :=
+    If[ Mod[a, p] === 0, 0, HenselLift[#^(p - 1) - 1 &, a, p, n] ]
+
+
+(* === squares: PAdicSquareQ, PAdicSqrt === *)
+
+(* Is the unit part a square? For odd p that is the Legendre condition; for
+   p = 2 the unit must be 1 mod 8. unit is a Rational p-adic unit. *)
+unitSquareQ[unit_, 2] := Mod[Numerator[unit] PowerMod[Denominator[unit], -1, 8], 8] === 1
+unitSquareQ[unit_, p_] := JacobiSymbol[Mod[Numerator[unit] PowerMod[Denominator[unit], -1, p], p], p] === 1
+
+PAdicSquareQ[0, _] := True
+PAdicSquareQ[x_ ? NumericQ, Infinity] := x > 0
+PAdicSquareQ[x_ ? NumericQ, p_Integer ? Positive] /; p >= 2 :=
+    With[{v = PAdicValuation[x, p]}, EvenQ[v] && unitSquareQ[x / p^v, p]]
+
+(* A square root of a p-adic unit residue u mod p^n, or $Failed. Odd p lifts a
+   residue-field root by Hensel; p = 2 lifts bit by bit because Hensel's
+   hypothesis fails there (the derivative 2x vanishes mod 2). *)
+unitSqrtResidue[u_, 2, n_] :=
+    Module[{s = 1}, Do[If[Mod[s^2 - u, 2^(k + 1)] =!= 0, s += 2^(k - 1)], {k, 3, n - 1}]; Mod[s, 2^n]]
+unitSqrtResidue[u_, p_, n_] :=
+    With[{s0 = SelectFirst[Range[p - 1], Mod[#^2 - u, p] === 0 &, $Failed]},
+        If[s0 === $Failed, $Failed, HenselLift[#^2 - u &, s0, p, n]]]
+
+PAdicSqrt[0, p_Integer ? Positive, n_Integer ? Positive] /; p >= 2 := 0
+PAdicSqrt[x_ ? NumericQ, p_Integer ? Positive, n_Integer ? Positive] /; p >= 2 :=
+    Module[{v = PAdicValuation[x, p], unit, ures},
+        (* a square root in Z_p exists only for a square of non-negative
+           valuation; PAdicSquareQ is the general Q_p predicate. *)
+        If[ v < 0 || ! PAdicSquareQ[x, p], Return[$Failed] ];
+        unit = x / p^v;
+        ures = Mod[Numerator[unit] PowerMod[Denominator[unit], -1, p^n], p^n];
+        Mod[unitSqrtResidue[ures, p, n] p^(v/2), p^n]
+    ]
+
+
+(* === the Hilbert symbol === *)
+
+(* (-1)^e helpers on odd units: eps(n) = (n-1)/2 mod 2 distinguishes n mod 4,
+   omega(n) = (n^2-1)/8 mod 2 distinguishes n mod 8. *)
+hilbertEps[n_] := Mod[(n - 1)/2, 2]
+hilbertOmega[n_] := Mod[(n^2 - 1)/8, 2]
+
+HilbertSymbol[a_ ? NumericQ, b_ ? NumericQ, Infinity] := If[a < 0 && b < 0, -1, 1]
+HilbertSymbol[a_ ? NumericQ, b_ ? NumericQ, p_Integer ? Positive] /; p >= 2 :=
+    Module[{al = PAdicValuation[a, p], be = PAdicValuation[b, p], u, v},
+        u = a / p^al; v = b / p^be;
+        If[ p === 2,
+            With[
+                {
+                    ui = Mod[Numerator[u] PowerMod[Denominator[u], -1, 8], 8],
+                    vi = Mod[Numerator[v] PowerMod[Denominator[v], -1, 8], 8]
+                },
+                (-1) ^ Mod[hilbertEps[ui] hilbertEps[vi] + al hilbertOmega[vi] + be hilbertOmega[ui], 2]
+            ],
+            With[
+                {
+                    ui = Mod[Numerator[u] PowerMod[Denominator[u], -1, p], p],
+                    vi = Mod[Numerator[v] PowerMod[Denominator[v], -1, p], p]
+                },
+                (-1) ^ Mod[al be hilbertEps[p], 2] JacobiSymbol[ui, p]^be JacobiSymbol[vi, p]^al
+            ]
         ]
     ]
 
@@ -478,6 +559,64 @@ PAdicValuationArray[p_Integer ? Positive, n_Integer ? Positive] /; p >= 2 :=
         Frame -> False,
         PlotRangePadding -> None,
         PlotLabel -> Row[{p, "-adic valuations of ", n, "\[Times]", n, " Pascal triangle (Kummer / Sierpinski)"}]
+    ]
+
+(* PAdicDiskPlot3D: the p-adic integers drawn as a self-similar stack of
+   coins. p coins (labelled 0..p-1) sit at the vertices of a regular p-gon to
+   make a cluster; p clusters sit at the vertices of a larger p-gon; and so
+   on to the requested depth. Two residues land in the same sub-cluster iff
+   they agree to that many base-p digits - the geometric "circles within
+   circles" picture of Z_p, and the coin-stack companion to PAdicTree. *)
+
+(* regular p-gon vertices, vertex 0 at top, going to the lower-left first so
+   the p = 3 layout is {0 top, 1 lower-left, 2 lower-right}. *)
+padicDiskVertices[p_] := N @ Table[{-Sin[2 Pi i/p], Cos[2 Pi i/p]}, {i, 0, p - 1}]
+
+PAdicDiskPlot3D[p_Integer ? Positive] /; p >= 2 := PAdicDiskPlot3D[p, 3]
+
+PAdicDiskPlot3D[p_Integer ? Positive, depth_Integer ? NonNegative] /; p >= 2 :=
+    Block[{verts, s, leaves, walk, label, xs, zs, cx, cz, half, coin},
+        verts = padicDiskVertices[p];
+        (* each sub-cluster shrinks by s, set just inside the "kissing" ratio
+           sin(pi/p)/(1 + sin(pi/p)) so siblings keep a small visible gap. *)
+        s = 0.9 Sin[Pi/p] / (1 + Sin[Pi/p]);
+        (* collect a {center, radius, finest-digit} triple per leaf coin *)
+        leaves = Reap[
+            walk[c_, r_, 0, d_] := Sow[{c, r, d}];
+            walk[c_, r_, k_, d_] := Do[
+                walk[c + r (1 - s) verts[[i + 1]], r s, k - 1, i], {i, 0, p - 1}];
+            walk[{0., 0.}, 1., depth, 0];
+        ][[2]];
+        leaves = If[leaves === {}, {{{0., 0.}, 1., 0}}, First @ leaves];
+        (* label only when the coins are few enough to read *)
+        label = p^depth <= 81;
+        xs = leaves[[All, 1, 1]]; zs = leaves[[All, 1, 2]];
+        cx = Mean @ MinMax @ xs; cz = Mean @ MinMax @ zs;
+        half = 0.55 Max[Max[xs] - Min[xs], Max[zs] - Min[zs], 0.5] + 0.15;
+        coin[{a_, b_}, r_, d_] := {
+            Cylinder[{{a, 0, b}, {a, 1.3 r, b}}, 0.9 r],
+            If[ label,
+                {GrayLevel[0.1], Text[Style[d, Bold, FontSize -> Scaled[0.45 r]], {a, -0.01, b}]},
+                Nothing
+            ]
+        };
+        Graphics3D[
+            {
+                Directive[RGBColor[0.93, 0.89, 0.79], Specularity[RGBColor[0.75, 0.65, 0.45], 22]],
+                coin @@@ leaves
+            },
+            Boxed -> False,
+            Background -> GrayLevel[0.16],
+            Lighting -> {
+                {"Ambient", GrayLevel[0.32]},
+                {"Directional", RGBColor[1, 0.94, 0.82], {{0, -3, 4}, {0, 0, 0}}},
+                {"Point", RGBColor[1, 0.86, 0.62], {3, -4, 4}}
+            },
+            ViewPoint -> {0, -3.2, 0.5},
+            ViewVertical -> {0, 0, 1},
+            PlotRange -> {{cx - half, cx + half}, Automatic, {cz - half, cz + half}},
+            ImageSize -> 620
+        ]
     ]
 
 
